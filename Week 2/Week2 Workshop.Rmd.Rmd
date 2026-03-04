@@ -1,0 +1,602 @@
+---
+title: "Week 2: Workshop"
+author: "Megan Collins"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+# library(knitr)
+# library(dplyr)
+# library(readxl)
+
+# Set your working directory
+ setwd("C:/Users/colli/git/BIO513/Week 2")
+```
+
+# Data file Format
+
+```{r}
+data<-mtcars
+write.csv(data,"data.txt")
+write.csv(data,"data.csv")
+write.csv2(data,"data2.csv")
+write.table(data,"data.tsv")
+rm(data)
+```
+
+*Lets open your folder and duplicate data.txt (which is comma separated) replace all the "," with "\|" save as data2.txt*
+
+## Plain Text .txt style
+
+```{r,Plain Text .txt style}
+# Plain text has No specific structure nor delimiter
+
+# Let's read in data.txt with read.csv()
+read.csv("data.txt")
+# Now lets read in using delim()
+read.delim("data.txt", sep = ",")
+
+# What about data2.txt ?
+# Can you read in using read.csv()?
+read.csv("data2.txt")
+# That looks a bit strange isn't it?
+# Lets specify the delimer "|" still using read.csv()
+read.csv("data2.txt", sep = "|")
+# How about read in with read.delim()?
+read.delim("data2.txt", sep = "|")
+
+```
+
+## Comma-separated values .csv style
+
+```{r, comma-separated values .csv style}
+
+# Lets read in data.csv using read.csv()
+read.csv("data.csv", header = TRUE, sep = ",")
+
+# What will happen if we say header = FALSE?
+read.csv("data.csv", header = FALSE, sep = ",")
+
+```
+
+## Semicolon-Separated values .csv2 style
+
+```{r,Semicolon-Separated values .csv2 style,error=TRUE,warning=FALSE}
+
+# can we read in data2.csv (csv2 style) with read.csv()?
+read.csv("data2.csv")
+# Did you get the following error?
+# Error in read.table(file = file, header = header, sep = sep, quote = quote,  :
+#   more columns than column names
+
+#How about now?
+read.csv("data2.csv", sep = ";")
+
+# Or using proper function read.csv2()?
+read.csv2("data2.csv")
+
+```
+
+## Tab separated values .tsv style
+
+```{r,tab separated values .tsv style}
+read.table("data.tsv")
+```
+
+### Bonus : excel sheets
+
+You will need "readxl" package
+
+```{r,eval=FALSE}
+# install.packages("readxl")    # remember? you only need to do this once
+
+library(readxl)
+# You have a .xlx file called "datasets.xlsx" In this file consists of 5 sheets: "mtcars", "iris", "Titanic", "airquality", and "ChickWeight". They are all datasets that are available in base R
+
+# if you don't define which sheet, read_excel() read in the first sheet
+read_excel("datasets.xlsx")
+
+# Lets read in "Titanic"
+read_excel("datasets.xlsx", sheet = "Titanic")
+
+```
+
+# Explore datasets
+
+## Iris dataset
+
+```{r}
+
+# Read in iris sheets of the datasets.xlsx and name this dataset as "iris"
+#iris <- read_excel("datasets.xlsx", sheet = "iris")
+iris <- iris
+cat("What data type is iris?")
+class(iris)
+
+cat("What are the dimension?")
+dim(iris)
+
+cat("What are the variables?")
+colnames(iris)
+
+# Let's have a peak of iris data
+head(iris)
+cat("There are 5 columns in iris data.frame.",
+    "\n",
+    "All apart from Species are numeric")
+
+cat("What is the range of Sepal Length?")
+range(iris$Sepal.Length)
+
+cat("What are the minimum, mean, median, and maximum of Sepal Width?")
+min(iris$Sepal.Width)
+mean(iris$Sepal.Width)
+median(iris$Sepal.Width)
+max(iris$Sepal.Width)
+## Or use summary()
+summary(iris$Sepal.Width)
+
+cat("Can we visualize Petal Length using histogram?")
+hist(iris$Petal.Length)
+
+cat("How many different species in this iris dataset?")
+length(unique(iris$Species))
+
+cat("What are they?")
+unique(iris$Species)
+
+cat("How many of each species do we have?")
+table(iris$Species)
+
+
+```
+
+# Which function
+
+```{r}
+cat("Which row index are representing versicolor in iris dataset?")
+
+which(iris$Species == "versicolor")
+
+# Lets check
+iris[which(iris$Species == "versicolor"), ]
+
+# summary(iris$Petal.Width[which(iris$Species=="versicolor")])
+cat(
+  "Which row index are representing versicolor",
+  "\n",
+  "and also its Petal width greater than 1.3 in iris dataset?"
+)
+
+which(iris$Species == "versicolor" & iris$Petal.Width > 1.3)
+
+# Lets check
+iris[which(iris$Species == "versicolor" & iris$Petal.Width > 1.3), ]
+
+
+```
+
+## using %in% for which()
+
+*which(A %in% B)*
+
+```{r}
+# Which iris row index are corresponding to "versicolor" and  "virginica" Species?
+which(iris$Species %in% c("versicolor", "virginica"))
+which(iris$Species=="versicolor" | iris$Species=="virginica")
+# Or in other words, which are NOT "setosa" ?
+which(iris$Species != "setosa")
+```
+
+# Match function
+
+*match(reference , data to flip)*
+
+```{r}
+# Lets make a two dummy string
+a<-c("coffee","matcha","juice","milkshake","wine")
+b<-c("tea","coffee","water","wine","juice")
+
+# If we want to match the order of a in b: meaning the order of a stays and change the order of b
+match(a,b)
+# lets check 
+b[match(a,b)]
+
+# can we do the oppsite?
+match(b,a)
+a[match(b,a)]
+
+```
+
+## Challenge #1: Can you find the common entires within a and b, and match the order of both subset?
+
+```{r}
+# Which entries in a is also found in b?
+idx<-which(a %in% b)
+# let's name the subset a1 
+a1<-a[idx]
+rm(idx)
+# Which entries in b is also found in a?
+idx<-which(b %in% a)
+
+# let's name the subset b1 
+b1<-b[idx]
+
+# do a1 and b1 has the same length?
+length(a1)==length(b1)
+
+# lets re-order the b1 to match with a1
+## checking a1
+a1
+## checking b1
+b1
+## checking if the order of a1 and a2 are really different to begin with
+a1==b1
+table(a1==b1)
+## inorder to match the order of b1 as a1, the array must be reorder as:
+match(a1,b1)
+## lets check
+b1[match(a1,b1)]
+## Are they really the same order?
+a1==b1[match(a1,b1)]
+## we can overwrite b1 with matched order
+b1<-b1[match(a1,b1)]
+
+```
+
+## Challenge #2: Can you find the common entires match two data.frame using ID column and make one data.frame "data3"?
+
+```{r}
+data1 <- data.frame(ID = paste0("ID_", seq(1:10)), randu[1:10, ]) # randu is another random dataset with 3 column x,y, and z
+
+data2 <- data.frame(
+  ID = paste0("ID_", sample(1:15)),
+  Age = round(runif(15, min = 20, max = 50), 0),
+  Sex = c(rep("F", 8), rep("M", 7))
+)
+```
+
+### Solution to Challenge #2:
+
+```{r}
+data1 <- data.frame(ID = paste0("ID_", seq(1:10)), 
+                    randu[1:10, ]) # randu is another random dataset with 3 column x,y, and z
+
+data2 <- data.frame(
+  ID = paste0("ID_", sample(1:15)),
+  Age = round(runif(15, min = 20, max = 50), 0),
+  Sex = c(rep("F", 8), rep("M", 7))
+)
+
+              ### Solution ###
+
+# which data1 ID are in data2 ID?
+which(data1$ID %in% data2$ID)
+data1 <- data1[which(data1$ID %in% data2$ID), ]
+# which data2 ID are in data1 ID?
+which(data2$ID %in% data1$ID)
+data2 <- data2[which(data2$ID %in% data1$ID), ]
+# Now you should see both data1 and data2 have 10 observation in total
+# Lets keep data1 ID order as a reference (do not move) and change the order of data2 dataset
+
+# match the order of data2 as data1
+match(data1$ID,data2$ID)
+data2<-data2[match(data1$ID,data2$ID),]
+
+# combine data1 and data2 using cbind() 
+data3<-cbind(data1,data2[,-1])
+
+data3
+```
+
+### Cleaning up the Environment *rm(list = ls())*
+
+```{r}
+# Environment is getting a bit messy.. lets clean up 
+rm(list = ls())
+```
+
+# dplyr
+
+```{r}
+# install.packages("dplyr") # you only need to do this once
+library(dplyr)
+# Lets use mtcars data for now
+```
+
+## select()
+
+```{r}
+colnames(mtcars)
+
+# let's select a column "mpg", "hp", "gear"
+
+mtcars %>% select(mpg, hp, gear)
+
+# let's select a column start with "d" on the column name: "disp", "drat"
+mtcars %>% select(starts_with("d"))
+
+# let's select a column ends with "t" on the column name:  "drat", "wt"
+mtcars %>% select(ends_with("t"))
+
+```
+
+## filter()
+
+```{r}
+# let's subset (*filter*) mtcars data where mpg is greater than 15
+mtcars %>% filter(mpg > 15)
+
+# Try filtering mpg >= 13.0 and hp > 100
+mtcars %>% filter(mpg >= 13 & hp < 100)
+
+# How about disp < 140 OR vs = 1?
+mtcars %>% filter(disp < 140 | vs == 1)
+
+```
+
+## Mutating Joins
+
+We can solve the challenge #2 using dplyr functions
+
+Lets explore what each joining function can do
+
+```{r}
+data1 <- data.frame(ID = paste0("ID_", seq(1:10)), randu[1:10, ]) # randu is another random dataset with 3 column x,y, and z
+
+data2 <- data.frame(
+  ID = paste0("ID_", sample(1:15)),
+  Age = round(runif(15, min = 20, max = 50), 0),
+  Sex = c(rep("F", 8), rep("M", 7))
+)
+```
+
+### Inner Join: inner_join()
+
+An inner_join(x,y) only keeps observations from x that have a matching key in y.
+
+```{r}
+inner_join(data1, data2, by = "ID")
+```
+
+### Outer Join: left_join()
+
+keeps all observations in x.
+
+```{r}
+left_join(data1, data2, by = "ID")
+
+# What if we swap the order?
+left_join(data2, data1, by = "ID")
+
+```
+
+### Outer Join: right_join()
+
+keeps all observations in y.
+
+```{r}
+right_join(data1, data2, by = "ID")
+
+# What if we swap the order?
+right_join(data2, data1, by = "ID")
+```
+
+### Outer join: full_join()
+
+keeps all observations in x and y.
+
+```{r}
+full_join(data1, data2)
+
+full_join(data2, data1)
+# Can you spot the difference?
+```
+
+## Base R: merge()
+
+```{r}
+
+merge(data1, data2)
+
+merge(data2, data1)
+# Can you spot the difference?
+```
+
+# Date and Time handling
+
+```{r}
+# Example random dates for R exercise
+dates <- c(
+  "2026-03-01",       # ISO format
+  "03/01/2026",       # US format
+  "01-03-2026",       # European format
+  "Mar 1, 2026",      # Month name
+  "March 01 2026",    # Full month
+  "2026/03/01",       # Slash ISO
+  "01-Mar-26",        # Short year
+  "1 Mar 2026",       # Day Month Year
+  "2026-3-1",         # Missing leading zeros
+  "03-1-2026",        # Mixed formatting
+  "2026-03-32",       # Typo: invalid day
+  "Feb 30, 2026",     # Typo: non-existent day
+  "2026/13/01",       # Typo: invalid month
+  "Mar-01-202",       # Typo: year missing digit
+  "2026-03-0a"        # Typo: invalid character
+)
+
+# Convert valid dates to Date class (will produce NA for invalid formats)
+as.Date(dates, tryFormats = c("%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%b %d, %Y", "%d %b %Y"))
+```
+
+## making dummy Date.xlsx (and save as .xlsx file)
+
+```{r}
+
+################### mixed_dates (Collection Date ) ################### 
+set.seed(123) # for reproducibility
+
+# Generate 30 random valid dates
+valid_dates <- as.Date("2025-01-01") + sample(0:730, 30, replace = TRUE) # random dates over 2 years
+
+# Create mixed formats
+random_dates <- sapply(valid_dates, function(d) {
+  fmt <- sample(1:5, 1)
+  if(fmt == 1) format(d, "%Y-%m-%d")       # ISO
+  else if(fmt == 2) format(d, "%m/%d/%Y")  # US
+  else if(fmt == 3) format(d, "%d-%m-%Y")  # EU
+  else if(fmt == 4) format(d, "%b %d, %Y") # Month name short
+  else format(d, "%d %b %Y")               # Day Month Year
+})
+
+# Add 10 Excel-style serial numbers (dates as numbers)
+# !!! NOTE: simply converting a Date to numeric in R gives the number of days since 1970-01-01, whereas Excel stores dates as days since 1899-12-30 (for Windows Excel) 
+excel_dates <- as.character(as.numeric(valid_dates[1:10] - as.Date("1899-12-30")))
+
+# Add 10 typo / messy dates
+typo_dates <- c(
+  "2026-02-30", "13/01/2026", "Feb 31, 2026", "03-15-26", 
+  "2025/2/29", "Mar-01-2a6", "2026-0a-05", "1/1/26", 
+  "Jul 32 2025", "2025/13/01"
+)
+
+# Combine all
+mixed_dates <- c(random_dates, excel_dates, typo_dates)
+
+# Shuffle
+set.seed(456)
+mixed_dates <- sample(mixed_dates)
+
+# Display
+as.data.frame(mixed_dates)
+################### formatted_dates (DOB) ################### 
+set.seed(789)  # for reproducibility
+
+# Generate 50 random dates from 1970-01-01 to 1999-12-31
+start_date <- as.Date("1970-01-01")
+end_date <- as.Date("1999-12-31")
+random_dates <- start_date + sample(0:(as.integer(end_date - start_date)), 50, replace = TRUE)
+
+# Convert to different common formats
+formatted_dates <- sapply(random_dates, function(d) {
+  fmt <- sample(1:4, 1)
+  if(fmt == 1) format(d, "%Y-%m-%d")       # ISO
+  else if(fmt == 2) format(d, "%m/%d/%Y")  # US
+  else if(fmt == 3) format(d, "%d-%m-%Y")  # EU
+  else format(d, "%b %d, %Y")              # Month name short
+})
+
+# Shuffle just in case
+set.seed(321)
+formatted_dates <- sample(formatted_dates)
+
+# Show the dates
+as.data.frame(formatted_dates)
+################### Construct Dummy Metadata ################### 
+
+Date = data.frame(
+  ID = seq(1,50,1),
+  DOB = formatted_dates,
+  CollectionDate = mixed_dates,
+  Sex = sample(c("M", "F"), 50, replace = TRUE),
+  height = round(runif(50, min = 150, max = 200), 1),
+  weight = round(runif(50, min = 50, max = 100), 1),
+  Group = sample(c("Control", "Treatment"), 50, replace = TRUE),
+  hsCRP = round(runif(50, min = 0.1, max = 10), 2),
+  HbA1c = round(runif(50, min = 4.0, max = 10.0), 1),
+  Trigricerides = round(runif(50, min = 50, max = 300), 1),
+  Cholesterol = round(runif(50, min = 100, max = 250), 1),
+  stringsAsFactors = FALSE
+)
+
+################### Add few mistake s################### 
+# introduce some typo in Sex (some in lower case, some written as male, female)
+Date$Sex[c(11,13)]<-"female"
+Date$Sex[c(22,33)]<-"male"
+Date$Sex[c(24,35)]<-c("f","m")
+table(Date$Sex)
+     # f      F female      m      M   male 
+     # 1     20      2      1     24      2 
+
+# lets make one of the height in m instead of cm
+Date$height[5]<-Date$height[5]/100
+
+# Lets swap height and weight for one of the observation
+temp<-Date$height[10]
+Date$height[10]<-Date$weight[10]
+Date$weight[10]<-temp
+rm(temp)
+
+# introduce some typo in Group (some in lower case, some written as con, treat)
+Date$Group[c(12,14)]<-"con"
+Date$Group[c(25,36)]<-"treat"
+
+# lets add NA in few of the hsCRP and HbA1c
+Date$hsCRP[c(15,26)]<-NA
+Date$HbA1c[c(16,27)]<-NA
+# save it as .xlsx
+writexl::write_xlsx(Date, "Date.xlsx")
+```
+
+### Cleaning up the Environment *rm(list = ls())*
+
+```{r}
+# Environment is getting a bit messy.. lets clean up 
+rm(list = ls())
+```
+
+## read in the Date.xlsx file using read_excel() function
+
+```{r}
+library(readxl)
+data<-read_excel("Date.xlsx")
+# Let's have a look
+data
+```
+
+## Excel-style serial numbers using as.Date() function
+
+```{r}
+as.Date(45956, origin = "1899-12-30")
+```
+
+# Lubridate
+
+lubridate is basically the superhero of handling dates and times in R. Before it, working with dates could be a real headache—parsing strings, extracting months, adding days… it was a lot of manual work. lubridate makes all of that super smooth.
+
+```{r}
+# install.packages("lubridate") # you only need to do this once
+library(lubridate)
+
+      ### Example of parsing dates with lubridate ###
+# Different formats
+ymd("20260301")          # "2026-03-01"
+mdy("03/01/2026")        # "2026-03-01"
+dmy("01-03-2026")        # "2026-03-01"
+
+# With times
+ymd_hms("2026-03-01 14:30:00")  # "2026-03-01 14:30:00 UTC"
+mdy_hm("03/01/2026 14:30")      # "2026-03-01 14:30:00 UTC" 
+```
+
+## Cleaning DOB
+
+```{r}
+DOB<-data$DOB
+# Parse DOB using lubridate parse_date_time()
+
+DOB_parsed<-parse_date_time(DOB, orders = c("ymd", "mdy", "dmy", "b d, Y"))
+
+data.frame(original = DOB, parsed = DOB_parsed)
+```
