@@ -1,0 +1,1019 @@
+---
+title: 'Week 3: Intoduction to Statistics I - Univariate Analysis'
+author: "Reika Masuda"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(stats) ## you need this for qqnorm()
+# -------------------------------
+# Base R setup
+# -------------------------------
+options(digits=4)
+
+# Manual functions
+skewness <- function(x) {
+  n <- length(x)
+  m3 <- sum((x - mean(x))^3)/n
+  s3 <- sd(x)^3
+  m3 / s3
+}
+
+kurtosis <- function(x) {
+  n <- length(x)
+  m4 <- sum((x - mean(x))^4)/n
+  s4 <- sd(x)^4
+  m4 / s4 - 3
+}
+
+cv <- function(x) sd(x)/mean(x)
+
+```
+
+# Univariate Analysis
+
+Univariate analysis examines one variable at a time, summarizing its central tendency, dispersion, and distribution.
+
+## Descriptive statistics
+
+```{r}
+# Dataset A – Symmetric, low variability
+data_A <- c(10, 11, 9, 10, 10, 11, 9, 10, 10, 10)
+
+# Dataset B – Right-skewed with outlier
+data_B <- c(8, 9, 10, 9, 11, 10, 9, 8, 10, 40)
+
+# Dataset C – Symmetric, high variability
+data_C <- c(2, 5, 8, 11, 14, 17, 20, 23, 26, 29)
+
+# Let's have a look at each dataset using histogram and density plot
+par(mfrow = c(1, 3))  # 3 plots side-by-side
+
+# Dataset A
+hist(data_A, probability = TRUE, main = "Dataset A",
+     xlab = "Values", col = "lightblue", border = "black")
+lines(density(data_A), lwd = 2)
+abline(v = mean(data_A), col = "red", lwd = 2, lty = 2)    # Mean
+legend("topright", legend = c("Mean"),
+       col = c("red", "darkgreen"), lty = c(2, 3), lwd = 2)
+
+# Dataset B
+hist(data_B, probability = TRUE, main = "Dataset B",
+     xlab = "Values", col = "lightgreen", border = "black")
+lines(density(data_B), lwd = 2)
+abline(v = mean(data_B), col = "red", lwd = 2, lty = 2)
+legend("topright", legend = c("Mean"),
+       col = c("red", "darkgreen"), lty = c(2, 3), lwd = 2)
+
+# Dataset C
+hist(data_C, probability = TRUE, main = "Dataset C",
+     xlab = "Values", col = "lightpink", border = "black")
+lines(density(data_C), lwd = 2)
+abline(v = mean(data_C), col = "red", lwd = 2, lty = 2)
+legend("topright", legend = c("Mean"),
+       col = c("red", "darkgreen"), lty = c(2, 3), lwd = 2)
+```
+
+### Measures of central tendency
+
+```{r}
+mean(data_A)
+median(data_A)
+
+mean(data_B)
+median(data_B)
+
+mean(data_C)
+median(data_C)
+
+
+par(mfrow = c(1, 3))  # 3 plots side by side
+
+# Dataset A
+hist(data_A, probability = TRUE, main = "Dataset A",
+     xlab = "Values", col = "lightblue", border = "black")
+lines(density(data_A), lwd = 2)
+abline(v = mean(data_A), col = "red", lwd = 2, lty = 2)    # Mean
+abline(v = median(data_A), col = "darkgreen", lwd = 2, lty = 3)  # Median
+legend("topright", legend = c("Mean", "Median"),
+       col = c("red", "darkgreen"), lty = c(2, 3), lwd = 2)
+
+# Dataset B
+hist(data_B, probability = TRUE, main = "Dataset B",
+     xlab = "Values", col = "lightgreen", border = "black")
+lines(density(data_B), lwd = 2)
+abline(v = mean(data_B), col = "red", lwd = 2, lty = 2)
+abline(v = median(data_B), col = "darkgreen", lwd = 2, lty = 3)
+legend("topright", legend = c("Mean", "Median"),
+       col = c("red", "darkgreen"), lty = c(2, 3), lwd = 2)
+
+# Dataset C
+hist(data_C, probability = TRUE, main = "Dataset C",
+     xlab = "Values", col = "lightpink", border = "black")
+lines(density(data_C), lwd = 2)
+abline(v = mean(data_C), col = "red", lwd = 2, lty = 2)
+abline(v = median(data_C), col = "darkgreen", lwd = 2, lty = 3)
+legend("topright", legend = c("Mean", "Median"),
+       col = c("red", "darkgreen"), lty = c(2, 3), lwd = 2)
+
+```
+
+### Measures of dispersion
+
+```{r}
+
+
+# Datasets
+data_A <- c(10, 11, 9, 10, 10, 11, 9, 10, 10, 10)
+data_B <- c(8, 9, 10, 9, 11, 10, 9, 8, 10, 40)
+data_C <- c(2, 5, 8, 11, 14, 17, 20, 23, 26, 29)
+
+datasets <- list("Dataset A" = data_A,
+                 "Dataset B" = data_B,
+                 "Dataset C" = data_C)
+
+par(mfrow = c(1,3), mar = c(4,4,3,1), oma = c(0,0,4,0))
+
+for(name in names(datasets)) {
+  
+  data <- datasets[[name]]
+  
+  mean_val <- mean(data)
+  sd_val   <- sd(data)
+  q1       <- quantile(data, 0.25)
+  q3       <- quantile(data, 0.75)
+  
+  hist(data, probability = TRUE,
+       main = name,
+       xlab = "Values",
+       col = "lightblue",
+       border = "black")
+  
+  lines(density(data), lwd = 2)
+  
+  abline(v = mean_val, col = "red", lwd = 2, lty = 2)
+  abline(v = mean_val + sd_val, col = "darkgreen", lwd = 2, lty = 3)
+  abline(v = mean_val - sd_val, col = "darkgreen", lwd = 2, lty = 3)
+  abline(v = q1, col = "purple", lwd = 2, lty = 4)
+  abline(v = q3, col = "purple", lwd = 2, lty = 4)
+}
+
+par(xpd = NA)
+legend("bottom",
+       inset = -0.25,
+       horiz = TRUE,
+       legend = c("Mean",
+                  "Mean ± SD",
+                  "Q1 & Q3 (IQR)",
+                  "Density"),
+       col = c("red", "darkgreen", "purple", "black"),
+       lty = c(2, 3, 4, 1),
+       lwd = 2,
+       bty = "n")
+
+par(mfrow = c(1,1))
+
+summary_table <- data.frame(
+  Dataset = names(datasets),
+  Mean = sapply(datasets, mean),
+  Median = sapply(datasets, median),
+  Variance = sapply(datasets, var),
+  SD = sapply(datasets, sd),
+  IQR = sapply(datasets, IQR),
+  CV = sapply(datasets, function(x) sd(x)/mean(x))
+)
+
+round(summary_table[,-1], 2)
+
+```
+
+## Probability distributions
+
+```{r}
+# Datasets
+data_A <- c(10, 11, 9, 10, 10, 11, 9, 10, 10, 10)
+data_B <- c(8, 9, 10, 9, 11, 10, 9, 8, 10, 40)
+data_C <- c(2, 5, 8, 11, 14, 17, 20, 23, 26, 29)
+
+datasets <- list("Dataset A" = data_A,
+                 "Dataset B" = data_B,
+                 "Dataset C" = data_C)
+colors <- c("Dataset A"="blue", "Dataset B"="red", "Dataset C"="green")
+
+# Set up layout: 1 row, 3 columns, space for legend
+par(mfrow=c(1,3), mar=c(4,2,3,1), oma=c(0,0,4,0))
+
+for(name in names(datasets)){
+  
+  data <- datasets[[name]]
+  mean_val <- mean(data)
+  sd_val   <- sd(data)
+  q1 <- quantile(data, 0.25)
+  q3 <- quantile(data, 0.75)
+  cv_val <- sd_val / mean_val
+  
+  # Dot plot (vertical jitter)
+  y_jitter <- runif(length(data), -0.05, 0.05)
+  plot(data, y_jitter, pch=19, col=colors[name], 
+       xlim=c(0, max(unlist(datasets))+5), ylim=c(-0.2,0.2),
+       ylab="", xlab="Value", main=name, yaxt='n', cex=1.5)
+  
+  # Mean line
+  abline(v=mean_val, col="black", lty=2, lwd=2)
+  
+  # SD lines (mean ± SD)
+  abline(v=mean_val + sd_val, col="darkgreen", lty=3, lwd=2)
+  abline(v=mean_val - sd_val, col="darkgreen", lty=3, lwd=2)
+  
+  # IQR lines
+  abline(v=q1, col="purple", lty=4, lwd=2)
+  abline(v=q3, col="purple", lty=4, lwd=2)
+  
+  # CV annotation
+  text(mean_val, 0.15, paste0("CV=", round(cv_val,2)), cex=0.9)
+}
+
+# Super title
+mtext("Spread Measures: SD, IQR & CV Across Datasets", outer=TRUE, cex=1.5)
+
+# Shared legend below plots
+par(xpd=NA)
+legend("bottom", inset=-0.25, horiz=TRUE,
+       legend=c("Mean", "Mean ± SD", "Q1 & Q3 (IQR)", "Dots"),
+       col=c("black","darkgreen","purple","black"),
+       lty=c(2,3,4,NA),
+       pch=c(NA, NA, NA, 19),
+       lwd=2,
+       bty="n")
+
+# Reset layout
+par(mfrow=c(1,1))
+```
+
+```{r}
+# Sample data
+set.seed(123)
+x <- c(rnorm(50, 0, 1), 3.5, -3)  # normal data + outliers
+
+# Basic boxplot without axes
+boxplot(x, horizontal = TRUE, col = "salmon", border = "purple",
+        main = "Annotated Boxplot: IQR and Outliers", axes = FALSE)
+
+# Add axis
+axis(1)
+
+# Compute quartiles
+Q1 <- quantile(x, 0.25)
+Q3 <- quantile(x, 0.75)
+Median <- median(x)
+IQR_val <- IQR(x)
+
+# Add IQR line
+arrows(Q1, 1.2, Q3, 1.2, code = 3, angle = 90, length = 0.1)
+text((Q1 + Q3)/2, 1.3, "Interquartile Range (IQR)")
+
+# Add median line label
+abline(v = Median, col = "yellow", lwd = 2)
+text(Median, 1.0, "Median", col = "yellow")
+
+# Add Q1 and Q3 labels
+text(Q1, 0.8, "Q1\n(25th percentile)", pos = 2)
+text(Q3, 0.8, "Q3\n(75th percentile)", pos = 4)
+
+# Add outlier labels
+outliers <- boxplot.stats(x)$out
+points(outliers, rep(1, length(outliers)), col = "green", pch = 16)
+text(outliers[1], 1.1, "Outlier", col = "green")
+text(outliers[2], 1.1, "Outlier", col = "green")
+
+# Add whisker min/max annotations
+min_whisker <- min(x[x >= (Q1 - 1.5*IQR_val)])
+max_whisker <- max(x[x <= (Q3 + 1.5*IQR_val)])
+text(min_whisker, 0.6, paste0('"Minimum"\n(Q1 - 1.5*IQR)'), pos = 2)
+text(max_whisker, 0.6, paste0('"Maximum"\n(Q3 + 1.5*IQR)'), pos = 4)
+```
+
+## Shape of distribution
+
+### Skewness
+
+```{r}
+# Load required library
+library(ggplot2)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate sample data for different skewness
+negative_skew <- rbeta(1000, 5, 1)    # Left-skewed
+zero_skew     <- rnorm(1000, mean=0)  # Symmetric (normal)
+positive_skew <- rbeta(1000, 1, 5)    # Right-skewed
+
+# Combine data into a single data frame
+data <- data.frame(
+  value = c(negative_skew, zero_skew, positive_skew),
+  skew_type = factor(rep(c("Negative Skew", "Zero Skew", "Positive Skew"), each=1000),
+                     levels=c("Negative Skew", "Zero Skew", "Positive Skew"))
+)
+
+# Calculate skewness for each group
+skew_labels <- aggregate(value ~ skew_type, data, function(x) round(skewness(x), 2))
+# Update facet labels to include skewness
+levels(data$skew_type) <- paste0(levels(data$skew_type), 
+                                 " (Skewness = ", skew_labels$value, ")")
+
+# Create density plot
+ggplot(data, aes(x=value, fill=skew_type)) +
+  geom_density(alpha=0.5) +
+  facet_wrap(~skew_type, ncol=1) +
+  theme_minimal() +
+  labs(title="Illustration of Skewness",
+       x="Data Values",
+       y="Density") +
+  scale_fill_manual(values=c("steelblue", "darkgreen", "tomato")) +
+  theme(legend.position="none",
+        strip.text = element_text(size=12, face="bold"))
+
+
+```
+
+### Kurtosis
+
+```{r}
+set.seed(123)
+
+# Generate sample data
+low_kurtosis  <- runif(1000, min=-3, max=3)    # Flat, light tails
+normal_data   <- rnorm(1000, mean=0, sd=1)    # Normal, medium kurtosis
+high_kurtosis <- rt(1000, df=3)               # Heavy tails, high kurtosis
+
+# Combine into data frame
+data <- data.frame(
+  value = c(low_kurtosis, normal_data, high_kurtosis),
+  kurtosis_type = factor(rep(c("Low Kurtosis", "Normal", "High Kurtosis"), each=1000),
+                         levels=c("Low Kurtosis", "Normal", "High Kurtosis"))
+)
+
+# Compute kurtosis for labels
+kurt_labels <- aggregate(value ~ kurtosis_type, data, function(x) round(kurtosis(x), 2))
+kurt_labels$label <- paste0(kurt_labels$kurtosis_type, " (Kurtosis = ", kurt_labels$value, ")")
+
+# Merge labels back to data for faceting
+data <- merge(data, kurt_labels[, c("kurtosis_type", "label")], by="kurtosis_type")
+
+# Plot
+ggplot(data, aes(x=value, fill=kurtosis_type)) +
+  geom_density(alpha=0.5) +
+  facet_wrap(~label, ncol=1) +
+  labs(title="Illustration of Kurtosis",
+       x="Data Values",
+       y="Density") +
+  scale_fill_manual(values=c("skyblue", "darkgreen", "tomato")) +
+  theme_minimal() +
+  theme(legend.position="none",
+        strip.text = element_text(size=12, face="bold"))
+```
+
+#### quick Environment cleaning
+
+```{r}
+rm(list=ls())
+```
+
+## Assessing Normality:
+
+```{r}
+# -------------------------------
+# Example R Script: Assessing Normality
+# -------------------------------
+# Sample data: slightly skewed
+set.seed(123)
+data <- c(45, 50, 52, 47, 55, 60, 49, 48, 53, 51, 46, 70, 44, 65, 50, 48, 52, 49, 55, 47)
+```
+
+### histogram
+
+```{r}
+# -------------------------------
+# 1. Histogram: Shows the frequency distribution of your data. Good for visualizing skewness.
+# -------------------------------
+hist(data, 
+     breaks = 10, 
+     col = "skyblue", 
+     main = "Histogram of Sample Data",
+     xlab = "Values",
+     ylab = "Frequency")
+```
+
+### density plot
+
+```{r}
+# -------------------------------
+# 2. Density Plot: Smoothed version of the histogram. Highlights the shape of the distribution.
+# -------------------------------
+plot(density(data), 
+     main = "Density Plot of Sample Data", 
+     xlab = "Values",
+     ylab = "Density", 
+     col = "blue", 
+     lwd = 2)
+polygon(density(data), col = rgb(0.2,0.5,0.8,0.3)) # shaded area
+```
+
+### Q-Q Plot
+
+```{r}
+# -------------------------------
+# 3. Q-Q Plot: Compares your sample quantiles to a theoretical normal distribution. Deviations from the diagonal indicate non-normality.
+# -------------------------------
+qqnorm(data, main = "Q-Q Plot of Sample Data")
+qqline(data, col = "red", lwd = 2)
+```
+
+### Shapiro-Wilk Test
+
+```{r}
+# -------------------------------
+# 4. Shapiro–Wilk Test: Statistical test for normality. p < 0.05 → data is not normal.
+# -------------------------------
+shapiro_result <- shapiro.test(data)
+shapiro_result
+
+# Print result nicely
+cat("Shapiro-Wilk Test:\n")
+cat("W =", round(shapiro_result$statistic,3), ", p-value =", round(shapiro_result$p.value,4), "\n")
+```
+
+### Kolmogorov-Smirnov test (NOT DONE YET)
+
+```{r}
+# -------------------------------
+# 5. Kolmogorov-Smirnov test:
+# -------------------------------
+
+set.seed(101)
+# Example 1: Normal data
+x_normal <- rnorm(50, mean=100, sd=15)
+
+# K–S test against normal distribution
+# We need to standardize data first: ks.test compares CDFs
+ks_normal <- ks.test(scale(x_normal), "pnorm")
+ks_normal
+
+# Interpretation:
+# - Null hypothesis (H0): sample comes from the reference distribution (here, normal)
+# - p-value > 0.05 → do not reject H0 (data may be normal)
+# - p-value < 0.05 → reject H0 (data differs significantly from normal)
+
+# Visual check: histogram and Q-Q plot
+par(mfrow=c(1,2))
+hist(x_normal, breaks=10, probability=TRUE, col="lightblue", main="Histogram")
+curve(dnorm(x, mean=mean(x_normal), sd=sd(x_normal)), col="red", add=TRUE, lwd=2)
+qqnorm(x_normal); qqline(x_normal, col="red")
+par(mfrow=c(1,1))
+
+# -----------------------------------------
+# Example 2: Skewed data
+x_skewed <- c(rpois(20, 2), rpois(20, 10))
+
+ks_skew <- ks.test(scale(x_skewed), "pnorm")
+ks_skew
+
+# Visual check
+par(mfrow=c(1,2))
+hist(x_skewed, breaks=10, col="lightgreen", main="Histogram - Skewed")
+qqnorm(x_skewed); qqline(x_skewed, col="red")
+par(mfrow=c(1,1))
+```
+
+```{r}
+# Example data
+set.seed(123)
+data <- rnorm(20, mean = 50, sd = 10)
+
+# Q-Q plot
+qqnorm(data); qqline(data)
+
+# Shapiro-Wilk test
+shapiro.test(data)
+
+
+# Example of non-normal data (right-skewed)
+set.seed(123)
+data_skew <- rexp(20, rate = 0.1)  # Exponential distribution
+
+# Q-Q plot
+qqnorm(data_skew); qqline(data_skew)
+
+# Shapiro-Wilk test
+shapiro.test(data_skew)
+
+```
+
+#### quick Environment cleaning
+
+```{r}
+rm(list=ls())
+
+```
+
+## Hypothesis testing (2 groups): parametric vs non-parametric
+
+```{r}
+# -------------------------------
+# R Script: Two-Group Hypothesis Testing with Plots
+# -------------------------------
+
+# Load libraries
+library(ggplot2)
+library(dplyr)
+```
+
+### Parametric
+
+#### Independent t-test
+
+```{r}
+# -------------------------------
+# 1. Independent t-test (Parametric)
+# -------------------------------
+set.seed(123)
+group_A <- c(45, 50, 52, 47, 55)
+group_B <- c(60, 62, 58, 65, 63)
+
+# Combine data for plotting
+independent_df <- data.frame(
+  Value = c(group_A, group_B),
+  Group = factor(rep(c("A", "B"), each = 5))
+)
+
+# Boxplot
+ggplot(independent_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1) +
+  labs(title = "Independent t-test: Group A vs B", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel1")
+
+# Independent t-test
+ind_ttest <- t.test(group_A, group_B, var.equal = TRUE)
+ind_ttest
+```
+
+#### Paired t-test
+
+```{r}
+# -------------------------------
+# 2. Paired t-test (Parametric)
+# -------------------------------
+before <- c(120, 125, 130, 118, 122)
+after  <- c(115, 120, 128, 110, 118)
+
+paired_df <- data.frame(
+  Subject = factor(1:5),
+  Before = before,
+  After = after
+)
+
+# Paired plot (lines connecting before/after)
+paired_df_long <- paired_df %>%
+  tidyr::pivot_longer(cols = c(Before, After), names_to = "Time", values_to = "Value")
+
+ggplot(paired_df_long, aes(x = Time, y = Value, group = Subject)) +
+  geom_line(color = "gray") +
+  geom_point(aes(color = Time), size = 3) +
+  labs(title = "Paired t-test: Before vs After", y = "Value") +
+  theme_minimal()
+
+# Paired t-test
+paired_ttest <- t.test(before, after, paired = TRUE)
+paired_ttest
+
+# -------------------------------
+# 3. Mann–Whitney U test (Non-parametric, independent)
+# -------------------------------
+# Same as group_A and group_B
+mann_whitney <- wilcox.test(group_A, group_B)
+mann_whitney
+
+# Boxplot for Mann–Whitney
+ggplot(independent_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1) +
+  labs(title = "Mann–Whitney U test: Group A vs B", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel2")
+
+# -------------------------------
+# 4. Wilcoxon signed-rank test (Non-parametric, paired)
+# -------------------------------
+wilcoxon_signed <- wilcox.test(before, after, paired = TRUE)
+wilcoxon_signed
+
+# Paired plot for Wilcoxon
+ggplot(paired_df_long, aes(x = Time, y = Value, group = Subject)) +
+  geom_line(color = "gray") +
+  geom_point(aes(color = Time), size = 3) +
+  labs(title = "Wilcoxon Signed-Rank Test: Before vs After", y = "Value") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Set1")
+```
+
+### Non-Parametric
+
+#### Mann–Whitney U (NOT DONE)
+
+```{r}
+# -----------------------------------------
+# ### Non-Parametric Tests
+# -----------------------------------------
+
+# Simulate data for independent groups (Mann–Whitney U)
+set.seed(123)
+group_ind <- rep(c("A","B"), each=20)
+y_ind <- c(rnorm(20, 50, 10), rnorm(20, 55, 10))
+
+# Boxplot to visualize
+boxplot(y_ind ~ group_ind, col=c("lightblue","lightgreen"),
+        main="Independent Groups - Mann–Whitney U Test",
+        ylab="Values", xlab="Group")
+
+# Mann–Whitney U test (independent, non-parametric)
+mann_whitney_result <- wilcox.test(y_ind ~ group_ind, exact=FALSE)
+mann_whitney_result
+```
+
+#### Wilcoxon signed-rank
+
+```{r}
+# -----------------------------------------
+# Simulate data for paired samples (Wilcoxon signed-rank)
+set.seed(124)
+y_paired_before <- rnorm(15, 50, 5)
+y_paired_after  <- y_paired_before + rnorm(15, 3, 4)  # paired differences
+
+# Boxplot to visualize paired differences
+boxplot(y_paired_before, y_paired_after, names=c("Before","After"),
+        col=c("orange","pink"), main="Paired Samples - Wilcoxon Signed-Rank Test",
+        ylab="Values")
+
+# Wilcoxon signed-rank test (paired, non-parametric)
+wilcoxon_result <- wilcox.test(y_paired_before, y_paired_after, paired=TRUE)
+wilcoxon_result
+```
+
+#### quick Environment cleaning
+
+```{r}
+rm(list=ls())
+```
+
+## Hypothesis testing (Multiple groups):
+
+### parametric One-way ANOVA
+
+```{r}
+# -------------------------------
+# R Script: Multiple Group Hypothesis Testing
+# -------------------------------
+
+# Load libraries
+library(ggplot2)
+library(dplyr)
+library(FSA)       # For Dunn test
+library(rcompanion) # For Dunn test adjusted p-values
+
+# -------------------------------
+# Example dataset
+# -------------------------------
+set.seed(123)
+group1 <- c(45, 50, 52, 47, 55)
+group2 <- c(60, 62, 58, 65, 63)
+group3 <- c(55, 53, 50, 57, 59)
+
+# Combine into a dataframe
+multi_df <- data.frame(
+  Value = c(group1, group2, group3),
+  Group = factor(rep(c("Group1", "Group2", "Group3"), each = 5))
+)
+
+# -------------------------------
+# 1. Visualize the groups
+# -------------------------------
+ggplot(multi_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1) +
+  labs(title = "Multiple Groups: Distribution of Values", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel1")
+
+# -------------------------------
+# 2. Parametric: One-way ANOVA
+# -------------------------------
+anova_result <- aov(Value ~ Group, data = multi_df)
+summary(anova_result)
+
+# -------------------------------
+# 2a. Post-hoc: Tukey HSD
+# -------------------------------
+tukey_result <- TukeyHSD(anova_result)
+tukey_result
+```
+
+#### non-parametric: Kruskal–Wallis Test
+
+```{r}
+# -------------------------------
+# 3. Non-parametric: Kruskal–Wallis Test
+# -------------------------------
+kruskal_result <- kruskal.test(Value ~ Group, data = multi_df)
+kruskal_result
+
+# -------------------------------
+# 3a. Post-hoc: Dunn Test
+# -------------------------------
+dunn_result <- dunnTest(Value ~ Group, data = multi_df, method="bonferroni")
+dunn_result
+```
+
+#### Anova vs Kruskal-Wallis
+
+```{r}
+# -------------------------------
+# Compare ANOVA vs Kruskal-Wallis Visualizations
+# -------------------------------
+
+# Load libraries
+library(ggplot2)
+library(gridExtra)  # for arranging multiple plots
+
+set.seed(123)
+
+# -------------------------------
+# 1. ANOVA dataset (normal)
+# -------------------------------
+anova_group1 <- rnorm(10, mean = 50, sd = 5)
+anova_group2 <- rnorm(10, mean = 55, sd = 5)
+anova_group3 <- rnorm(10, mean = 60, sd = 5)
+
+anova_df <- data.frame(
+  Value = c(anova_group1, anova_group2, anova_group3),
+  Group = factor(rep(c("Group1", "Group2", "Group3"), each = 10))
+)
+
+anova_plot <- ggplot(anova_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.1, size = 2, color = "black") +
+  labs(title = "One-way ANOVA (Normal Data)", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel1")
+
+# -------------------------------
+# 2. Kruskal-Wallis dataset (skewed)
+# -------------------------------
+kruskal_groupA <- rexp(10, rate = 0.1) + 40
+kruskal_groupB <- rexp(10, rate = 0.1) + 50
+kruskal_groupC <- rexp(10, rate = 0.1) + 60
+
+kruskal_df <- data.frame(
+  Value = c(kruskal_groupA, kruskal_groupB, kruskal_groupC),
+  Group = factor(rep(c("GroupA", "GroupB", "GroupC"), each = 10))
+)
+
+kruskal_plot <- ggplot(kruskal_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.1, size = 2, color = "black") +
+  labs(title = "Kruskal-Wallis (Skewed Data)", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel2")
+
+# -------------------------------
+# Arrange both plots vertically
+# -------------------------------
+grid.arrange(anova_plot, kruskal_plot, ncol = 1)
+
+# -------------------------------
+# Steps to Showcase Skewness
+# -------------------------------
+      # 1. Histogram
+      # Shows the shape of the distribution
+      # Skewed data will have a long tail to one side
+
+hist(kruskal_df$Value,
+     breaks = 10,
+     main = "Histogram of Kruskal-Wallis Data",
+     xlab = "Value",
+     col = "lightblue")
+
+      # 2. Density Plot
+      # Smoothed version of histogram
+      # Makes skew more obvious
+
+plot(density(kruskal_df$Value),
+     main = "Density Plot of Kruskal-Wallis Data",
+     xlab = "Value",
+     ylab = "Density",
+     col = "blue", lwd = 2)
+polygon(density(kruskal_df$Value), col = rgb(0.2,0.5,0.8,0.3))
+
+      # 3. Q–Q Plot
+      # Compares your data to a theoretical normal distribution
+      # For skewed data, points curve away from the diagonal
+
+qqnorm(kruskal_df$Value, main = "Q-Q Plot of Kruskal-Wallis Data")
+qqline(kruskal_df$Value, col = "red")
+
+      # 4. Skewness Statistic
+      # Quantifies the asymmetry of the distribution
+      # Positive skew → right tail longer
+      # Negative skew → left tail longer
+# Install e1071 if not already installed
+# install.packages("e1071")
+library(e1071)
+
+# skewness_value <- skewness(kruskal_df$Value)
+cat("Skewness =", round(skewness(kruskal_df$Value), 3), "\n")
+cat("Skewness =", round(skewness(anova_df$Value), 3), "\n")
+      # Interpretation:
+      # skewness > 0 → right-skewed (common for Kruskal-Wallis example)
+      # skewness ≈ 0 → approximately symmetric (normal)
+      # skewness < 0 → left-skewed
+
+      # 5. Optional: Violin Plot
+library(ggplot2)
+
+# Violin plot with individual points
+ggplot(kruskal_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_violin(trim = FALSE, alpha = 0.6) +   # Show full density, not trimmed
+  geom_jitter(width = 0.1, size = 2, color = "black") +  # Show individual points
+  stat_summary(fun = median, geom = "point", shape = 23, size = 3, fill = "white") +  # median
+  labs(title = "Violin Plot: Kruskal-Wallis Groups", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel2")
+
+```
+
+### One-way ANOVA Visualization
+
+Dataset: Normally distributed values for 3 independent groups
+
+Why this works for ANOVA:
+
+Boxplots clearly show the mean and spread of each group.
+
+Jittered points show the individual observations.
+
+Parametric ANOVA assumes normally distributed data, so this visualization highlights the mean differences and variance.
+
+```{r}
+# Load libraries
+library(ggplot2)
+
+set.seed(123)
+# Normally distributed data for parametric ANOVA
+group1 <- rnorm(10, mean = 50, sd = 5)
+group2 <- rnorm(10, mean = 55, sd = 5)
+group3 <- rnorm(10, mean = 60, sd = 5)
+
+anova_df <- data.frame(
+  Value = c(group1, group2, group3),
+  Group = factor(rep(c("Group1", "Group2", "Group3"), each = 10))
+)
+
+# Visualization: Boxplot + jitter for ANOVA
+ggplot(anova_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.1, size = 2, color = "black") +
+  labs(title = "One-way ANOVA: Comparison of Group Means", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel1")
+```
+
+### Kruskal–Wallis Visualization
+
+Dataset: Skewed/non-normal values for 3 independent groups
+
+Boxplots show median, spread, and skew — important since Kruskal–Wallis compares ranks, not means.
+
+Jittered points highlight outliers and distribution shape, which can affect non-parametric tests.
+
+This type of plot makes it clear why non-parametric tests are preferred for skewed or non-normal data.
+
+```{r}
+set.seed(123)
+# Skewed data for non-parametric test
+groupA <- rexp(10, rate = 0.1) + 40
+groupB <- rexp(10, rate = 0.1) + 50
+groupC <- rexp(10, rate = 0.1) + 60
+
+kruskal_df <- data.frame(
+  Value = c(groupA, groupB, groupC),
+  Group = factor(rep(c("GroupA", "GroupB", "GroupC"), each = 10))
+)
+
+# Visualization: Boxplot + jitter for Kruskal-Wallis
+ggplot(kruskal_df, aes(x = Group, y = Value, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.1, size = 2, color = "black") +
+  labs(title = "Kruskal–Wallis Test: Comparison of Group Ranks", y = "Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel2")
+```
+
+#### quick Environment cleaning
+
+```{r}
+rm(list=ls())
+```
+
+## Effect Size
+
+### Fold-change
+
+```{r}
+group1 <- c(10,12,9,11,10)
+group2 <- c(15,16,14,18,17)
+
+fc <- mean(group2) / mean(group1)
+log2fc <- log2(fc)
+
+fc
+log2fc
+```
+
+### Cohen’s d
+
+```{r}
+x <- rnorm(20, mean=10, sd=2)
+y <- rnorm(20, mean=12, sd=2)
+
+d <- (mean(x) - mean(y)) /
+     sqrt((var(x) + var(y))/2)
+
+d
+# or write it in as a function below
+cohen_d <- function(x, y) {
+  nx <- length(x)
+  ny <- length(y)
+  pooled_sd <- sqrt(((nx-1)*var(x) + (ny-1)*var(y))/(nx+ny-2))
+  (mean(x) - mean(y))/pooled_sd
+}
+
+cohen_d(x, y)
+
+```
+
+### Hedges’ g
+
+```{r}
+n <- length(x) + length(y)
+
+g <- d * (1 - (3 / (4*n - 9)))
+
+g
+```
+
+### Bonferroni correction
+
+```{r}
+pvals <- runif(10)
+cat("lets first check the raw p-values")
+pvals
+cat("now see how the bonferroni correction adjusts them")
+p.adjust(pvals, method="bonferroni")
+
+
+```
+
+### Benjamini–Hochberg FDR
+
+```{r}
+cat("now see how the Benjamini–Hochberg FDR correction adjusts them")
+p.adjust(pvals, method="BH")
+```
+
+### q-values
+
+```{r}
+cat("now see how the q-value correction adjusts them")
+p.adjust(pvals, method="fdr")
+```
+
+## Confidence Intervals
+
+```{r}
+t.test(x, y)
+
+t.test(x, y)$conf.int
+```
