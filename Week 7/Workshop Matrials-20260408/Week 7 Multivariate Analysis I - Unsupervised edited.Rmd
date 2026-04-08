@@ -1,0 +1,629 @@
+---
+title: 'Week 7: Multivariate Analysis I - Unsupervised'
+author: "Reika Masuda"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mva.plots) # for PCA
+library(fusion)
+library(dplyr)
+```
+
+load("lipo_data.RData")
+```{r}
+load("lipo_data.RData")
+```
+
+# PCA
+
+## PCA for Dimensionality Reduction
+```{r}
+cat("\n", "What is the dimension of the input data matrix lipo?", "\n")
+
+cat(
+  "\n",
+  "Diemnsion of lipo:",
+  nrow(lipo) ,
+  "x",
+  ncol(lipo),
+  "\n",
+  "Meaning that we have",
+  nrow(lipo),
+  "samples and",
+  ncol(lipo),
+  "metabolites."
+)
+```
+
+### PCA with non-specified rank (default)
+
+```{r}
+pca_mod1 <- prcomp(lipo, center = TRUE, scale. = TRUE)
+
+```
+
+### What do you find in the model?
+
+```{r}
+names(pca_mod1)
+
+```
+
+### sdev: Standard deviations of the principal components (square root of eigenvalues).
+
+*What does this tell us about the variance explained by each PC?*
+```{r}
+cat(
+  "\n",
+  "The length of the sdev vector indicates the number of principal components (PCs) that were computed.",
+  "\n",
+  "In this model with lipo data, we have",
+  length(pca_mod1$sdev),
+  "principal components, which is equal to the number of original variables (metabolites) == FULL RANK.",
+  "\n",
+  "This is because PCA computes as many PCs as the number of original variables, but only the first few will typically explain most of the variance in the data."
+)
+
+plot(pca_mod1$sdev)
+
+
+```
+
+### What is the dimension of the PCA scores matrix?
+```{r}
+cat(
+  "\n",
+  "Dimension of the PCA scores matrix can be found in model$x",
+  "\n",
+  "In this case, the model computed full rank so the number of scores on the column is equal to the number of original variables (metabolites)."
+)
+plot(pca_mod1$x[, 1:2])
+```
+
+### What is the dimension of the PCA loadings matrix?
+```{r,fig.width=6, fig.height=6}
+cat(
+  "\n",
+  "Dimension of the PCA loadings matrix can be found in model$rotation",
+  "\n",
+  "In this case, Data imput had ",
+  ncol(lipo),
+  "metabolites, so the number of loadings on the column is equal to the number of original variables (metabolites)."
+)
+
+plot(pca_mod1$rotation[, 1:2])
+text(
+  pca_mod1$rotation[, 1:2],
+  labels = colnames(lipo),
+  cex = 0.7,
+  pos = 4
+)
+```
+
+## PCA for QC and Outlier Detection
+### simpler using mva.plots package
+
+pre-define the maximum rank calculation to 2 for easier visualization and interpretation of the PCA results.
+```{r,error=FALSE}
+pca_mod1 <- PCA(lipo,
+                center = TRUE,
+                scale. = TRUE,
+                rank = 2)
+
+# plot the scores of the first 2 principal components we modelled
+plotScores(pca_mod1)
+
+# Lets put some colore on the samples based on their sampleType
+plotScores(pca_mod1, optns = list(color = lipo_an$sampleType))
+
+# Lets put some colore on the samples based on their plateID
+
+tryCatch({
+  plotScores(pca_mod1, optns = list(color = lipo_an$plateID))
+}, 
+error = function(e) {
+  message("plotScores failed: ", e$message)
+})
+
+cat(
+  "\n",
+  "Did you get the following error?",
+  "\n",
+  "! Insufficient values in manual scale. 10 needed but only 8
+  provided.",
+  "\n",
+  "This is because we have 10 unique plateIDs but the default discrete palette only has 8 colors. We can fix this by providing a custom color palette with enough colors for all unique plateIDs."
+)
+
+
+plotScores(
+  pca_mod1,
+  optns = list(
+    color = lipo_an$plateID,
+    shape= lipo_an$sampleType,
+
+    discretePalette = RColorBrewer::brewer.pal(n = length(unique(lipo_an$plateID)), name = "Set3")
+  )
+)
+
+```
+
+*Now we are happy with the QC check remove the ltrs from the dataset and remodel the PCA*
+
+```{r}
+lipo<-lipo[which(lipo_an$sampleType=="sample"),]
+lipo_an<-lipo_an[which(lipo_an$sampleType=="sample"),]
+pca_mod1 <- PCA(lipo,
+                center = TRUE,
+                scale. = TRUE,
+                rank = 2)
+
+
+```
+
+
+## PCA for Exploratory Data Analysis
+```{r}
+# Lets put some colore on the samples based on their sampleTimePoint
+
+
+cols<-c(
+        "T1" = "lightblue",
+        "T2" = "blue",
+        "T3" = "purple",
+        "T4" = "#41AE76",
+        "T5" = "#FDE0DD",
+        "T6" = "#DD3497",
+        "T7" = "#CE1256")
+
+
+plotScores(
+  pca_mod1,
+  optns = list(
+    color = lipo_an$sampleTimePoint,
+    discretePalette = cols
+  )
+)
+
+plotLoadings(pca_mod1)
+
+
+cat("What do you see from the score and loading plots?")
+
+```
+
+## PCA and Scaling Methods
+
+### How does the choice of scaling method affect the Dataset?
+```{r, results='asis'}
+# Load libraries
+library(ggplot2)
+library(reshape2)
+library(scales)  # for rescaling
+
+# 1. Mean-centering
+mean_centered <- scale(lipo[,grep("TG",colnames(lipo))], center = TRUE, scale = FALSE)
+
+# 2. Autoscaling (unit variance scaling)
+autoscaled <- scale(lipo[,grep("TG",colnames(lipo))], center = TRUE, scale = TRUE)
+
+# 3. Pareto scaling (divide by sqrt of SD)
+pareto_scaled <- scale(lipo[,grep("TG",colnames(lipo))], center = TRUE, scale = apply(lipo[,grep("TG",colnames(lipo))], 2, function(x) sqrt(sd(x))))
+
+# 4. Vast scaling (weight by CV)
+vast_scaled <- scale(lipo[,grep("TG",colnames(lipo))], center = TRUE, scale = apply(lipo[,grep("TG",colnames(lipo))], 2, function(x) sd(x)/mean(x)))
+
+# Combine for visualization
+scaled_list <- list(
+  Original = lipo[,grep("TG",colnames(lipo))],
+  MeanCentered = mean_centered,
+  Autoscaled = autoscaled,
+  Pareto = pareto_scaled,
+  VAST = vast_scaled
+)
+
+# Convert to long format for ggplot
+plot_data <- do.call(rbind, lapply(names(scaled_list), function(name){
+  df <- as.data.frame(scaled_list[[name]])
+  df$Sample <- rownames(df)
+  df$Scaling <- name
+  melt(df, id.vars = c("Sample", "Scaling"), variable.name = "Triglyceride", value.name = "Value")
+}))
+
+# Plot to compare scaling methods
+ggplot(plot_data, aes(x = Triglyceride, y = Value, fill = Triglyceride)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~Scaling, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "Comparison of Scaling Methods for PCA", y = "Scaled Value") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  theme(legend.position = "none")
+
+```
+
+
+### How does the choice of scaling method affect the PCA results?
+```{r,results='asis',warning=FALSE,error=FALSE,message=FALSE}
+
+# Load libraries
+library(grid)
+library(gridExtra)
+# library(ggplot2)
+# library(reshape2)
+library(RColorBrewer)
+
+for(i in 1:length(scaled_list)){
+  df <- as.data.frame(scaled_list[[i]])
+  pca_mod2 <- PCA(df,
+                  center = FALSE,
+                  scale. = FALSE,
+                  rank = 2)
+  plotScores(pca_mod2,
+             optns = list(
+               color = lipo_an$sampleTimePoint,
+               discretePalette = cols,
+               colorTitle = "Timepoint",
+               plotTitle = names(scaled_list)[i]
+             ))
+  plotLoadings(pca_mod2)
+  
+
+}
+
+```
+
+# HCA
+```{r}
+# lets clean the workspace and load the data again for HCA
+rm(list=ls())
+load("lipo_data.RData")
+
+## remove LTRs
+lipo<-lipo[which(lipo_an$sampleType=="sample"),]
+lipo_an<-lipo_an[which(lipo_an$sampleType=="sample"),]
+
+data<-lipo[,grep("PL",colnames(lipo))] # subset to only TGs for easier visualization of HCA results
+```
+
+HCA Process Steps
+1. Standardization: Normalize variables to ensure they are on the same scale.
+2. Distance Calculation: Compute the dissimilarity matrix (e.g., Euclidean or Manhattan).
+3. Linkage Application: Choose a linkage method (e.g., Ward's, Complete) to join clusters.
+4. Dendrogram Analysis: Visualize the hierarchy to select the best cutting point to define the number of clusters.
+5. Cluster Evaluation: Validate clusters using silhouette scores or domain expertise.
+
+
+*Advantages*:
+Does not require specifying the number of clusters (k) in advance.
+Produces an intuitive visual tree (dendrogram).
+Works well with small to medium-sized datasets.
+
+*Limitations*:
+High computational cost: Complexity is usually $O(n^3)$ for time and $O(n^2)$ for memory.
+Scalability: Not ideal for very large datasets (e.g., 1,000+ observations).
+"Greedy" nature: Once a merge or split is done, it cannot be undone. 
+
+## Agglomerative (Bottom-Up - AGNES):
+This is the most common approach.
+Process: Starts with each data point as its own cluster (leaf) and merges the closest pairs of clusters into a single cluster (node) at each step.
+Final Output: A single large cluster containing all objects.
+
+## Demonstrate Multiple Distance Metrics
+```{r}
+# =========================================
+# R Script: Demonstrate Multiple Distance Metrics (Updated)
+# =========================================
+
+# Load required libraries
+library(stats)      # for dist, hclust
+library(proxy)      # for cosine distance
+library(MASS)       # for Mahalanobis
+
+
+```
+
+### 1. Euclidean Distance (L2)
+```{r}
+dist_euclidean <- dist(data, method = "euclidean")
+hc_euclidean <- hclust(dist_euclidean)
+```
+
+### 2. Manhattan Distance (L1)
+```{r}
+dist_manhattan <- dist(data, method = "manhattan")
+hc_manhattan <- hclust(dist_manhattan)
+```
+
+### 3. Correlation-Based Distance
+```{r}
+cor_matrix <- cor(t(data), method = "pearson")  # samples as rows
+dist_correlation <- as.dist(1 - cor_matrix)
+hc_correlation <- hclust(dist_correlation)
+```
+
+### 4. Spearman Correlation Distance
+```{r}
+cor_spearman <- cor(t(data), method = "spearman")
+dist_spearman <- as.dist(1 - cor_spearman)
+hc_spearman <- hclust(dist_spearman)
+```
+
+### 5. Cosine Distance (Angle-Based)
+```{r}
+dist_cosine <- proxy::dist(data, method = "cosine")
+hc_cosine <- hclust(dist_cosine)
+```
+
+### 6. Mahalanobis Distance (Covariance-Aware) - Fixed
+```{r}
+
+data_mat <- as.matrix(data)  # convert data frame to numeric matrix
+cov_mat <- cov(data_mat)
+
+n <- nrow(data_mat)
+dist_mat <- matrix(0, n, n)
+
+for(i in 1:n){
+  for(j in i:n){
+    diff <- data_mat[i, ] - data_mat[j, ]       # numeric vector
+    d <- sqrt(t(diff) %*% solve(cov_mat) %*% diff)
+    dist_mat[i, j] <- d
+    dist_mat[j, i] <- d
+  }
+}
+
+dist_mahalanobis <- as.dist(dist_mat)
+hc_mahalanobis <- hclust(dist_mahalanobis)
+```
+
+### 7. Optional: Compare Dendrograms
+
+```{r,warning=FALSE,error=FALSE,message=FALSE}
+library(dendextend)
+
+# Convert HCA objects to dendrograms
+dend_list <- list(
+  Euclidean = as.dendrogram(hc_euclidean),
+  Manhattan = as.dendrogram(hc_manhattan),
+  Correlation = as.dendrogram(hc_correlation),
+  Spearman = as.dendrogram(hc_spearman),
+  Cosine = as.dendrogram(hc_cosine),
+  Mahalanobis = as.dendrogram(hc_mahalanobis)
+)
+
+# remove labels
+dend_list <- lapply(dend_list, function(d) {
+
+  labels(d) <- NULL            # remove leaf labels
+  d
+})
+
+# Plot in grid
+par(mfrow = c(2,3), mar = c(4,4,2,1))  # adjust margins
+for(name in names(dend_list)){
+  plot(dend_list[[name]], main = name)
+}
+par(mfrow = c(1,1))  # reset layout
+```
+
+
+
+## Divisive (Top-Down - DIANA):
+Process: Starts with all data points in a single cluster and recursively splits the most heterogeneous clusters into smaller ones.
+Final Output: Individual singleton clusters. 
+```{r}
+
+library(cluster)    # for divisive clustering (diana)
+
+# Divisive clustering only works on Euclidean distances by default
+divisive <- diana(data, metric = "euclidean")
+# Convert diana object to hclust object for plotting
+hc_divisive <- as.hclust(divisive)
+# Divisive dendrogram (separate plot)
+plot(hc_divisive, main="Divisive Clustering (diana)" ,labels = FALSE)
+```
+
+## Linkage Methods (Measuring Cluster Dissimilarity)
+Linkage criteria define the distance between clusters of observations, influencing the shape and density of the final clusters:
+
+### Single Linkage (Minimum): 
+
+Finds the shortest distance between any single point in one cluster and any point in another. It is effective for non-elliptical shapes but susceptible to noise and "chaining".
+```{r}
+# Single linkage example
+dist_single <- dist(data, method = "euclidean")
+hc_single <- hclust(dist_single, method = "single")
+plot(hc_single, main="Single Linkage", labels = FALSE)
+```
+
+
+### Complete Linkage (Maximum): 
+
+Finds the longest distance between two points in different clusters. It produces more compact, spherical clusters, making it less sensitive to outliers.
+
+```{r}
+# Complete linkage example
+dist_complete <- dist(data, method = "euclidean")
+hc_complete <- hclust(dist_complete, method = "complete")
+plot(hc_complete, main="Complete Linkage", labels = FALSE)
+```
+
+
+### Average Linkage (UPGMA/WPGMA): 
+
+Calculates the average distance between all pairs of points across clusters. It provides a balance between single and complete methods.
+
+```{r}
+# Average linkage example
+dist_average <- dist(data, method = "euclidean")
+hc_average <- hclust(dist_average, method = "average")
+plot(hc_average, main="Average Linkage", labels = FALSE)
+```
+
+
+### Ward’s Method (Minimum Variance): 
+
+Minimizes the total within-cluster variance. It is generally considered best for quantitative variables and produces tight, similar-sized clusters.
+```{r}
+# Ward's method example
+dist_ward <- dist(data, method = "euclidean")
+hc_ward <- hclust(dist_ward, method = "ward.D2")
+plot(hc_ward, main="Ward's Method", labels = FALSE)
+```
+
+### Optional: Compare all linkage methods in a single plot
+```{r,fig.width=8, fig.height=8}
+
+par(mfrow=c(2,2))  # arrange plots
+plot(hc_single, main="Single Linkage", labels = FALSE)
+plot(hc_complete, main="Complete Linkage", labels = FALSE)
+plot(hc_average, main="Average Linkage", labels = FALSE)
+plot(hc_ward, main="Ward's Method", labels = FALSE)
+par(mfrow=c(1,1))  # reset layout
+
+
+
+```
+
+
+# UMAP
+
+```{r}
+# lets clean the workspace and load the data again for HCA
+rm(list=ls())
+load("lipo_data.RData")
+
+## remove LTRs
+lipo<-lipo[which(lipo_an$sampleType=="sample"),]
+lipo_an<-lipo_an[which(lipo_an$sampleType=="sample"),]
+
+data<-lipo[,grep("TG",colnames(lipo))] # subset to only TGs for easier visualization of HCA results
+```
+
+```{r}
+# Install required packages if needed
+# install.packages(c("umap", "ggplot2"))
+
+library(umap)
+# library(ggplot2)
+
+# Run UMAP
+umap_res <- umap(data, n_neighbors=15, min_dist=0.1, random_state=42)
+umap_df <- data.frame(UMAP1 = umap_res$layout[,1],
+                      UMAP2 = umap_res$layout[,2],
+                      Timepoint = lipo_an$sampleTimePoint)
+
+# Plot
+ggplot(umap_df, aes(x=UMAP1, y=UMAP2, color=Timepoint)) +
+  geom_point(size=2, shape=18) +
+  theme_minimal() +
+  theme(legend.title=element_blank())
+
+
+# Run UMAP
+umap_res <- umap(data, n_neighbors=7, min_dist=0.1, random_state=42)
+umap_df <- data.frame(UMAP1 = umap_res$layout[,1],
+                      UMAP2 = umap_res$layout[,2],
+                      Timepoint = lipo_an$sampleTimePoint)
+
+# Plot
+ggplot(umap_df, aes(x=UMAP1, y=UMAP2, color=Timepoint)) +
+  geom_point(size=3, shape=15) +
+  theme_minimal() +
+  theme(legend.title=element_blank())
+```
+
+
+# SOM
+```{r}
+# lets clean the workspace and load the data again for HCA
+rm(list=ls())
+load("lipo_data.RData")
+
+## remove LTRs
+lipo<-lipo[which(lipo_an$sampleType=="sample"),]
+lipo_an<-lipo_an[which(lipo_an$sampleType=="sample"),]
+
+data<-lipo[,grep("PL",colnames(lipo))] 
+data<-data[,grep("H",colnames(data))]
+
+# subset to only HDL TGs for easier visualization of HCA results
+```
+
+## Step 0: load the kohonen package for SOMs
+```{r}
+library(kohonen)
+```
+
+
+## Step 1: scale and normalise dataset
+```{r}
+
+data<-scale(data)
+
+```
+
+## Step 2: set the output grid for the SOM.  This is a bit of an art, but a good starting point is to set the number of map units to be around the square root of the number of samples.  The shape of the grid can be either rectangular or hexagonal, and you can also choose whether to make it toroidal (wraps around like a donut) or not.
+```{r}
+
+sqrt(nrow(data))
+
+g <- somgrid(xdim = 5, ydim = 5, topo = "hexagonal" )
+```
+
+## Step 3: train the SOM.  This is a bit of a black box, but you can adjust the number of iterations and the learning rate if you want to play with it.  The default settings usually work well for most datasets.
+
+```{r}
+som_model <- som(
+  data.matrix(data), # This is the training model
+  grid = g,
+  rlen = 100,
+  alpha = c(0.05, 0.01),
+  dist.fcts = "euclidean"
+)
+
+```
+
+## Step 4: visualise the results.  The most common way to visualise a SOM is to plot the map units and colour them based on the values of the variables.  You can also add cluster boundaries to see how the map units group together.
+
+### Plot the Training Progress
+```{r}
+plot(som_model, type = "changes", main = "SOM Training Progress")
+
+```
+
+
+### plot the Node Counts
+To show how many observations are mapped to each node
+```{r}
+plot(som_model, type = "count", main = "SOM Node Counts")
+
+```
+
+## plot the distance between the codebook vectors 
+
+(also known as the U-matrix) to visualize the cluster structure of the SOM. The U-matrix shows the distances between neighboring nodes, with higher values indicating greater dissimilarity and potential cluster boundaries.
+```{r}
+plot(som_model, type = "dist.neighbours", main = "SOM U-Matrix (Distance Between Neighbors)")
+```
+
+### plot the map units 
+```{r}
+plot(som_model, type = "mapping", bgcol = rainbow(7)[as.numeric(cut(som_model$codes[[1]][,1], breaks=7))], main = "SOM Map Units Colored by First Variable")
+
+```
+### codes plot 
+```{r}
+plot(som_model, type='codes')
+```
+
+```{r}
+table(lipo_an$sampleTimePoint, som_model$unit.classif)
+```
+
+
