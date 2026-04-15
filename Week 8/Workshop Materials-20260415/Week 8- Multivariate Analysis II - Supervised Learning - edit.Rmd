@@ -1,0 +1,413 @@
+---
+title: "Week 8: Multivariate Analysis II - Supervised Learning"
+author: "RM"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mva.plots)
+library(ropls)
+```
+
+## Load the <data:Paracetamol_urine.Rdata>
+
+In this data you will find 1H NMR urine spectra from 5 individuals who
+were given a single dose of paracetamol. The spectra were acquired at 4
+time points (0, 2, 4, and 6 hours) after drug administration.
+
+The spec_bcor spectra were preprocessed using baseline correction only
+with no normalisation. The spec_pqn spectra were preprocessed using
+probabilistic quotient normalization (PQN) after baseline correction.
+
+```{r}
+# Set your working directory and load the Paracetamol urine dataset
+load("Paracetamol_urine.Rdata")
+```
+
+First lets look at the spectra using matspec() from mva.plots. This will
+give us an idea of the data we are working with and the region of
+interest (roi).
+
+Interest: Acetaminophen glucuronide is a metabolite of paracetamol that
+can be detected in urine. It typically resonates in the region of 7.0 to
+7.5 ppm in the NMR spectrum.
+
+```{r}
+matspec(spec_bcor, ppm, roi = c(7.0, 7.5))
+
+matspec(spec_pqn, ppm, roi = c(7.0, 7.5))
+
+```
+
+## PLS regression using ropls
+
+```{r}
+# Subset the data to the region of interest (7.0 to 7.5 ppm)
+df <- spec_pqn[, which(ppm > 7.0 & ppm < 7.5)]
+Y_cont <- annotation$Paracetamol.glucuronide  # Continuous response for PLS
+
+```
+
+```{r}
+# Run PLS regression using ropls
+pls_model <- opls(df, Y_cont, predI = 2, orthoI = 0)
+
+```
+
+### Explanation of the figure:
+
+**1. Top-left: R²Y and Q² per component (p1, p2)**
+
+**Axes**
+
+X-axis: Components (latent variables) p1 = first latent variable p2 =
+second latent variable
+
+Y-axis: Model performance (0 → 1 scale)
+
+**Bars**
+
+R²Y (grey): Fraction of variance in Y explained by the model Measures
+goodness of fit
+
+Q²Y (black): Fraction of variance in Y predicted by cross-validation
+Measures predictive ability Interpretation
+
+High R²Y (\~0.8–0.9) → model fits well
+
+Moderate Q² (\~0.6–0.7) → decent predictive performance
+
+**Gap between R² and Q²:**
+
+Small gap → good model
+
+Large gap → possible overfitting
+
+**2. Top-right: Permutation test (model validation)**
+
+**Axes**
+
+X-axis: Similarity between original Y and permuted Y
+
+(Similarity(y, y_perm))
+
+-   1 = real model
+
+-   0 or negative = random permutations
+
+Y-axis: Model performance
+
+-   Values of R²Y (grey) and Q²Y (black)
+
+**Points**
+
+Each point = a permuted model
+
+Rightmost point = original (true) model
+
+**Parameters**
+
+-   pR2Y = 0.05
+
+-   pQ2 = 0.05
+
+These are p-values
+
+Measure whether your model is better than random
+
+**Interpretation**
+
+Real model should be:
+
+-   Far right
+
+    -   Higher Q² than permuted models
+
+    -   Low p-values (\<0.05) → model is statistically valid
+
+-   If permuted Q² overlaps real → overfitting risk
+
+**3. Bottom-left: Observation diagnostics (outlier detection)**
+
+**Axes**
+
+X-axis: Score Distance (SD)
+
+-   Distance of sample in score space (model space)
+
+-   Measures how far a sample is from the center
+
+Y-axis: Orthogonal Distance (OD)
+
+-   Distance from model plane
+
+-   Measures how poorly the sample is described by the model
+
+**Threshold lines**
+
+Horizontal dashed line → OD limit
+
+Vertical (implicit) threshold → SD limit
+
+**Interpretation**
+
+-   Low SD + Low OD: good samples
+
+-   High SD: extreme but modeled well
+
+-   High OD: poorly modeled (potential outlier)
+
+-   High SD + High OD: strong outliers
+
+Subject_4_4hours → high SD → influential sample
+
+**4. Bottom-right: Scores plot (PLS)**
+
+**Axes**
+
+X-axis: t1 (17%)
+
+-   First latent variable
+
+-   Explains 17% of X variance
+
+Y-axis: t2 (11%)
+
+-   Second latent variable
+
+-   Explains 11% of X variance
+
+**Points**
+
+-   Each point = sample
+
+-   Labels = sample IDs / groups
+
+**Ellipse**
+
+-   Confidence ellipse (usually 95%)
+
+    -   Defines normal variation region
+
+**Parameters** (bottom)
+
+R2X = 0.287
+
+-   Variance in X explained (28.7%)
+
+R2Y = 0.955
+
+-   Variance in Y explained (95.5%)
+
+Q2 = 0.638
+
+-   Predictive ability
+
+RMSEE = 0.642
+
+-   Root Mean Square Error of Estimation
+
+pre = 2
+
+-   Number of predictive components
+
+**Interpretation**
+
+-   Separation along t1/t2 → group differences
+
+-   Clustering → similar metabolic profiles
+
+-   Points outside ellipse → potential outliers
+
+### Question: Is this model overfitting?
+
+**1. R² vs Q² (Top-left) → Primary overfitting check**
+
+-   **R²Y ≈ 0.95** (very high)
+
+-   **Q² ≈ 0.64** (moderate–good)
+
+-   **Gap ≈ 0.31**
+
+-   Rule of thumb:
+
+    -   Good: Δ(R² − Q²) \< 0.2–0.3
+
+    -   Borderline: \~0.3
+
+    -   Overfit: \> 0.3–0.4
+
+**2. Permutation test (Top-right) → Most important validation**
+
+-   **pR2Y = 0.05**
+
+-   **pQ2 = 0.05**
+
+    -   Model is **just statistically significant**
+
+    -   Ideally you want: pQ² \< 0.01 (strong) Clear separation from
+        permuted models
+
+--\> Model is better than random but not strongly robust \### Check the
+model summary
+
+```{r}
+# Check the model summary
+summary(pls_model)
+
+```
+
+### Get predictions from the model
+
+```{r}
+# Get predictions from the model
+predictions <- predict(pls_model)
+```
+
+### Plot observed vs predicted values
+
+```{r}
+# Plot observed vs predicted values
+plot(Y_cont, predictions, main = "PLS: Observed vs Predicted")
+abline(0, 1, col = "red")
+```
+
+OR use fitted () function to get predicted values directly from the
+model
+
+```{r}
+pred <- fitted(pls_model)
+
+plot(Y_cont, pred,
+     xlab = "Actual Y",
+     ylab = "Predicted Y")
+abline(0,1)
+```
+
+# OPLS - DA example
+
+```{r}
+rm(list=ls())
+load("~/git/reika2/BIO513-Introduction-to-Bioinformatics-and-Data-Science-2026-S1/W7/lipo_data.RData")
+
+## remove LTRs
+lipo<-lipo[which(lipo_an$sampleType=="sample"),]
+lipo_an<-lipo_an[which(lipo_an$sampleType=="sample"),]
+
+lipo_red<-lipo[which(lipo_an$sampleTimePoint %in% c("T1","T4")),]
+lipo_an_red<-lipo_an[which(lipo_an$sampleTimePoint %in% c("T1","T4")),]
+
+Y_cat <- factor(as.character(lipo_an_red$sampleTimePoint))  # Categorical response for PLS-DA
+
+model_oplsda <- opls(lipo_red, Y_cat, predI = 2, orthoI = 0)
+
+```
+
+## **Model Summary**
+
+```{r}
+model_oplsda@modelDF
+```
+
+You’ll see:
+
+### **R2X**
+
+-   \% of variation in X explained by model --\> “How well we summarize
+    X”
+
+### **R2Y**
+
+-   \% of variation in Y explained --\> “How well we explain class
+    separation”
+
+### **Q2**
+
+-   Predictive ability (via cross-validation) --\> **MOST IMPORTANT for
+    model validity**
+
+------------------------------------------------------------------------
+
+### How to explain:
+
+-   **R2X**: how much of X we compress into components
+-   **R2Y**: how well classes are separated
+-   **Q2**: how well model predicts unseen data
+
+--\> Rule of thumb:
+
+-   Good model: high R2Y + high Q2
+-   Overfit model: high R2Y but low Q2 ❗
+
+\##**Score Plot (Samples)**
+
+```{r}
+plot(model_oplsda, typeVc = "x-score")
+```
+
+--\> Each point = sample --\> Axes = latent variables (t1, t2)
+
+### Interpretation:
+
+-   Separation between Control vs Disease → good model
+-   Overlap → weak discrimination
+
+## **Loading plot (Variables)**
+
+```{r}
+plot(model_oplsda, typeVc = "x-loading")
+```
+
+--\> Shows which variables contribute to components
+
+## **VIP Scores (Variable Importance in Projection)**
+
+```{r}
+vip <- getVipVn(model_oplsda)
+head(sort(vip, decreasing = TRUE))
+```
+
+### Interpretation:
+
+-   VIP \> 1 → important variables
+-   Should highlight Var1–Var10 (true signals)
+
+“VIP scores rank variables based on their contribution to class
+separation. Values above 1 are typically considered important.”
+
+## **Regression Coefficients**
+
+```{r}
+coef <- coef(model_oplsda)
+```
+
+### Interpretation:
+
+-   Positive → associated with Disease
+-   Negative → associated with Control
+
+------------------------------------------------------------------------
+
+### Explain:
+
+“These coefficients quantify how each variable contributes to predicting
+class membership — this is the regression view of the model.”
+
+------------------------------------------------------------------------
+
+## Prediction
+
+```{r}
+pred <- fitted(model_oplsda)
+
+```
+
+## \*\* Confusion Matrix\*\*
+
+```{r}
+table(pred, Y_cat)
+```
