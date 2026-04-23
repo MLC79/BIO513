@@ -1,0 +1,172 @@
+---
+title: "Week 9"
+author: "MC"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+devtools::install_github("phenological/nmr-spectra-processing")
+# knit package
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE,warning = FALSE)
+library(mva.plots)
+library(nmr.spectra.processing)
+```
+
+Step 1: load the "Week9_Paracetamol_urine_NMR_Spectra.Rdata" 
+
+```{r}
+load("Week9_Paracetamol_urine_NMR_Spectra.Rdata")
+```
+
+
+```{r}
+load "Week9_Paracetamol_urine_NMR_Spectra.Rdata
+```
+
+Step 2: check what is inside the data and tell me all the dimensions of the data
+```{r}
+dim(spec) #dimensions of spec Data
+dim(spec_anno)
+dim(ppm) # dimensions of ppm vector?? its an array, so wrong question
+class(ppm)
+class(spec_anno)
+class(spec)
+length(ppm)
+```
+Step 3: plot the TSP spectra region using matspec() from mva.plots. This will give us an idea of the data we are working with and the region of interest (roi).
+```{r}
+matspec(spec,ppm,roi = c(-0.5, 0.05), interactive =FALSE, main = "TSP region of Spectra")
+matspec(spec,ppm,roi = c(-0.05, 0.05))
+
+range(ppm)
+matspec(spec,ppm,roi = c(1.46, 1.53))
+```
+
+
+Step 4: calibrate the Urine spectra using the TSP peak at 0 ppm. Use the function calibrateSpectra() from nmr.spectra.processing package.and named the calibrated spectra as "spec_cal". 
+```{r}
+?calibrateSpectra
+spec_cal<-calibrateSpectra(ppm,spec,ref= c("tsp"),
+                           rOref = c(-0.05, 0.05),
+                           cshift = 0)
+
+```
+
+
+Step 5: plot the calibrated spectra using matspec() from mva.plots. to see how the TSP regions have been aligned, and compared to the uncalibrated spectra.
+Also check the rest of the spectra to see if there are any other peaks that are not aligned and discuss how this may affect downstream analysis.
+```{r}
+matspec(spec_cal,ppm,roi = c(-0.05, 0.05), interactive = FASLE, main = "TSP region of the calibrated spectra")
+matspec(spec_cal,ppm,roi = c(1.45, 1.52), interactive = FALSE, main = "1.46-1.53 ppm region of the calibrated spectra")
+```
+
+
+Step 6: check the ppm < 0.5 region of the spectra to see if there are any peaks apart from TSP
+```{r}
+matspec(spec_cal,ppm,roi = c(-5, 0.5), interactive = FALSE)
+```
+
+
+Step 7: check the residual water peak region (4.5 to 5.0 ppm) to see if there are any peaks that may interfere with the analysis and discuss how this may affect downstream analysis.
+```{r}
+matspec(spec_cal,ppm,roi= c(4.6, 4.9),interactive = TRUE)
+```
+
+
+Step 8: check the ppm > 9.5 region of the spectra to see if there are any peaks that may interfere with the analysis and discuss how this may affect downstream analysis.
+```{r}
+matspec(spec_cal,ppm,roi= c(9.5, 14.5),interactive = FALSE)
+```
+
+
+Step 9: based on the above observations, can we remove those three region? if so please subset the spectra to remove those three regions and name the new spectra as "spec_subset".
+```{r}
+idx<-c(which(ppm<0.5), #remove TSP region
+       which(ppm>4.6 & ppm<5.0), # remove water region
+       which(ppm >9.5) #remove high ppm region
+
+idx<-c(which(ppm <0.5),
+       which(ppm>4.6 & ppm <5.0),
+       which(ppm >9.5))
+
+length(which(ppm>4.6 & ppm<5.0))
+spec_subset<-spec_cal[,-idx] 
+
+dim(spec_cal)
+dim(spec_subset)
+
+```
+
+
+Step 10: subset the same region from the ppm vector and name it as "ppm_subset".
+```{r}
+ppm_subset<-ppm[-idx]
+
+```
+
+
+Step 11: check the dimensions of the new subsetted spectra and ppm vector to make sure they are correct.
+```{r}
+#ncol stands for number of columns
+ncol(spec_subset)==length(ppm_subset)
+```
+
+Step 12: apply Baseline correction to the subsetted spectra using the function baselineCorrection() from nmr.spectra.processing package and name the baseline corrected spectra as "spec_bcor".
+```{r}
+?baselineCorrection
+
+spec_bcor<-baselineCorrection(spec_subset)
+
+```
+
+
+Step 13: plot the baseline corrected spectra using matspec() from mva.plots to see how the baseline has been corrected and compared to the uncorrected spectra.
+```{r}
+matspec(spec_subset,ppm_subset,roi = c(1.46, 1.53), interactive = FALSE, main = "Baseline uncorrected spectra")
+```
+
+
+Step 14: apply Total Area Normalisation to the baseline corrected spectra using the function normaliseSpectra() from nmr.spectra.processing package and name the normalised spectra as "spec_TSA".
+```{r}
+?normalize
+matspec(spec_subset,ppm_subset,roi = c(1.46, 1.53), interactive = FALSE, main = "Baseline corrected spectra")
+spec_TAN<-normalize(spec_bcor, method = rowSums) #for Total Area Normalization
+spec_PQN<-normalize(spec_bcor, method = rowSums) #for Total Area Normalization
+spec_sum<-normalize(spec_bcor, method = sum) #rowsum
+
+```
+
+
+Step 15: apply PQN Normalisation to the baseline corrected spectra using the function normaliseSpectra() from nmr.spectra.processing package and name the normalised spectra as "spec_PQN".
+```{r}
+
+spec_PQN<-normalize(spec_bcor)
+matspec(spec_subset,ppm_subset,roi = c(1.46, 1.53), interactive = FALSE, main = "Baseline corrected spectra")
+
+matspec(spec_PQN,ppm_subset,roi = c(1.46, 1.53), interactive = FALSE, main = "PQN normalized spectra")
+matspec(spec_sum,ppm_subset,roi = c(1.46, 1.53), interactive = FALSE, main = "total area normalized")
+
+```
+
+
+Step 16: plot the normalised spectra using matspec() from mva.plots to see how the normalisation has affected the spectra and compared to the baseline corrected spectra.
+```{r}
+#Compare baseline corrected to normalized spectra
+matspec(spec_subset,ppm_subset,roi = c(1.46, 1.53), interactive = FALSE, main = "Baseline Corrected")
+matspec(spec_sum,ppm_subset,roi = c(1.46, 1.53), interactive = FALSE, main = "Total Area Normalized")
+
+
+```
+
+
+Step 17: Try modeling PCA using raw spectra, baseline corrected spectra, TSA normalised spectra and PQN normalised spectra. Compare the PCA scores plots to see how the different preprocessing steps have affected the separation of the samples in the PCA space. Also check the loadings plots to see which variables are contributing to the separation of the samples in the PCA space and how this changes with different preprocessing steps.
+```{r}
+
+```
+
